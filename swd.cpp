@@ -10,6 +10,8 @@
 #include "swd.h"
 #include "clk.h"
 #include "target.h"
+#include "wiring.h"
+#include "mypin.h"
 
 #define MWAIT __asm__ __volatile__( \
 		 ".syntax unified 		\n" \
@@ -47,18 +49,25 @@ static swdStatus_t swdGetRegister( uint8_t const regId, uint32_t * const data );
 
 void swdCtrlInit( void )
 {
-	RCC->AHBENR |= RCC_AHBENR_GPIO_SWDIO;
-	RCC->AHBENR |= RCC_AHBENR_GPIO_SWCLK;
+//	RCC->AHBENR |= RCC_AHBENR_GPIO_SWDIO;
+//	RCC->AHBENR |= RCC_AHBENR_GPIO_SWCLK;
 
-	GPIO_SWDIO->MODER |= (0x01u << (PIN_SWDIO << 1u));
-	GPIO_SWCLK->MODER |= (0x01u << (PIN_SWCLK << 1u));
+//	GPIO_SWDIO->MODER |= (0x01u << (PIN_SWDIO << 1u));
+//	GPIO_SWCLK->MODER |= (0x01u << (PIN_SWCLK << 1u));
 
-	GPIO_SWDIO->OSPEEDR |= (0x03 << (PIN_SWDIO << 1u));
-	GPIO_SWCLK->OSPEEDR |= (0x03 << (PIN_SWCLK << 1u));
+//	GPIO_SWDIO->OSPEEDR |= (0x03 << (PIN_SWDIO << 1u));
+//	GPIO_SWCLK->OSPEEDR |= (0x03 << (PIN_SWCLK << 1u));
 
 	/* pulldown for clk, pullup for swdio */
-	GPIO_SWDIO->PUPDR |= (0x01u << (PIN_SWDIO << 1u));
-	GPIO_SWCLK->PUPDR |= (0x02u << (PIN_SWCLK << 1u));
+//	GPIO_SWDIO->PUPDR |= (0x01u << (PIN_SWDIO << 1u));
+//	GPIO_SWCLK->PUPDR |= (0x02u << (PIN_SWCLK << 1u));
+
+	myDigitalWrite(PIN_SWCLK, LOW);
+	myDigitalWrite(PIN_SWDIO, LOW);
+	
+	myPinMode(PIN_SWCLK, OUTPUT);
+	myPinMode(PIN_SWDIO, OUTPUT);
+	
 
 	return ;
 }
@@ -101,17 +110,21 @@ static void swdDatasend( uint8_t const * data, uint8_t const len )
 
 		if ((cdata & 0x01u) == 0x01u)
 		{
-			GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_SET));
+			//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_SET));
+			myDigitalWrite(PIN_SWDIO, HIGH);
 		}
 		else
 		{
-			GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+			//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+			myDigitalWrite(PIN_SWDIO, LOW);
 		}
 		MWAIT;
 
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		cdata >>= 1u;
 		MWAIT;
 	}
@@ -122,9 +135,12 @@ static void swdDatasend( uint8_t const * data, uint8_t const len )
 
 static void swdDataIdle( void )
 {
-	GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO));
+	//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO));
+	myDigitalWrite(PIN_SWDIO, HIGH);
 	MWAIT;
-	GPIO_SWDIO->MODER &= ~(0x03u << (PIN_SWDIO << 1u));
+	//GPIO_SWDIO->MODER &= ~(0x03u << (PIN_SWDIO << 1u));
+	myPinMode(PIN_SWDIO, INPUT_PULLUP);
+
 	MWAIT;
 
 	return ;
@@ -134,8 +150,11 @@ static void swdDataIdle( void )
 static void swdDataPP( void )
 {
 	MWAIT;
-	GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
-	GPIO_SWDIO->MODER |= (0x01u << (PIN_SWDIO << 1u));
+	//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+	myDigitalWrite(PIN_SWDIO, LOW);
+	//GPIO_SWDIO->MODER |= (0x01u << (PIN_SWDIO << 1u));
+	myPinMode(PIN_SWDIO, OUTPUT);
+
 	MWAIT;
 
 	return ;
@@ -144,9 +163,11 @@ static void swdDataPP( void )
 
 static void swdTurnaround( void )
 {
-	GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+	//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+	myDigitalWrite(PIN_SWCLK, HIGH);
 	MWAIT;
-	GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+	//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+	myDigitalWrite(PIN_SWCLK, LOW);
 	MWAIT;
 
 	return ;
@@ -166,12 +187,15 @@ static void swdDataRead( uint8_t * const data, uint8_t const len )
 	{
 
 		cdata >>= 1u;
-		cdata |= (GPIO_SWDIO->IDR & (0x01u << (PIN_SWDIO))) ? 0x80u : 0x00u;
+		//cdata |= (GPIO_SWDIO->IDR & (0x01u << (PIN_SWDIO))) ? 0x80u : 0x00u;
+		cdata |= (digitalRead(PIN_SWDIO) != LOW) ? 0x80u : 0x00u;
 		data[(((len + 7u) >> 3u) - (i >> 3u)) - 1u] = cdata;
 
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		MWAIT;
 
 		/* clear buffer after reading 8 bytes */
@@ -190,8 +214,10 @@ static void swdReset( void )
 	uint8_t i = 0u;
 
 	MWAIT;
-	GPIO_SWDIO->ODR |= 0x01u << PIN_SWDIO;
-	GPIO_SWCLK->ODR |= 0x01u << PIN_SWCLK;
+//	GPIO_SWDIO->ODR |= 0x01u << PIN_SWDIO;
+//	GPIO_SWCLK->ODR |= 0x01u << PIN_SWCLK;
+	myDigitalWrite(PIN_SWDIO, HIGH);
+	myDigitalWrite(PIN_SWCLK, HIGH);
 	MWAIT;
 
 /* Switch from JTAG to SWD mode. Not required for SWD-only devices (STM32F0x). */
@@ -200,9 +226,11 @@ static void swdReset( void )
 	/* 50 clk+x */
 	for (i=0u; i < (50u + 10u); ++i)
 	{
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		MWAIT;
 	}
 
@@ -212,15 +240,19 @@ static void swdReset( void )
 	for (i = 0u; i < 16u; ++i)
 	{
 		if (send1[i])
-			GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_SET));
+			//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_SET));
+			myDigitalWrite(PIN_SWDIO, HIGH);
 		else
-			GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+			//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+			myDigitalWrite(PIN_SWDIO, LOW);
 
 		MWAIT;
 
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		MWAIT;
 
 	}
@@ -229,20 +261,25 @@ static void swdReset( void )
 	/* 50 clk+x */
 	for (i = 0u; i < (50u + 10u); ++i)
 	{
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		MWAIT;
 	}
 
 
-	GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+	//GPIO_SWDIO->BSRR = (0x01u << (PIN_SWDIO + BSRR_CLEAR));
+	myDigitalWrite(PIN_SWDIO, LOW);
 
 	for (i = 0u; i < 3u; ++i)
 	{
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_SET));
+		myDigitalWrite(PIN_SWCLK, HIGH);
 		MWAIT;
-		GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		//GPIO_SWCLK->BSRR = (0x01u << (PIN_SWCLK + BSRR_CLEAR));
+		myDigitalWrite(PIN_SWCLK, LOW);
 		MWAIT;
 	}
 

@@ -8,12 +8,8 @@
 
 #ifndef INC_CLK_H
 #define INC_CLK_H
-#include "st/stm32f0xx.h"
 
-void clkEnablePLLInt( void );
-void clkEnableSystick( void );;
-
-void waitus( uint16_t const us );
-void waitms( uint16_t const ms );
+#define waitms(x) delay(x)
+#define waitus(x) delayMicroseconds(x)
 
 #endif

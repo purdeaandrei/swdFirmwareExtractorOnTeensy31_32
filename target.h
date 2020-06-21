@@ -8,16 +8,19 @@
 
 #ifndef INC_TARGET_H
 #define INC_TARGET_H
-#include "st/stm32f0xx.h"
+//#include "st/stm32f0xx.h"
 
 #define RCC_AHBENR_GPIO_RESET (RCC_AHBENR_GPIOAEN)
 #define RCC_AHBENR_GPIO_POWER (RCC_AHBENR_GPIOAEN)
 
-#define GPIO_RESET (GPIOA)
-#define PIN_RESET (12u)
+//#define GPIO_RESET (GPIOA)
+//#define PIN_RESET (12u)
 
-#define GPIO_POWER (GPIOA)
-#define PIN_POWER (9u)
+//#define GPIO_POWER (GPIOA)
+//#define PIN_POWER (9u)
+
+#define PIN_RESET 18
+#define PIN_POWER 22
 
 
 void targetSysCtrlInit( void );

@@ -8,12 +8,13 @@
 
 #include <stdint.h>
 #include <string.h>
-#include "st/stm32f0xx.h"
+//#include "st/stm32f0xx.h"
 #include "main.h"
 #include "clk.h"
 #include "swd.h"
 #include "target.h"
 #include "uart.h"
+#include "mypin.h"
 
 
 static swdStatus_t extractFlashData( uint32_t const address, uint32_t * const data );
@@ -41,7 +42,10 @@ static swdStatus_t extractFlashData( uint32_t const address, uint32_t * const da
 	/* try up to MAX_READ_TRIES times until we have the data */
 	do
 	{
-		GPIO_LED_GREEN->ODR &= ~(0x01u << PIN_LED_GREEN);
+		//GPIO_LED_GREEN->ODR &= ~(0x01u << PIN_LED_GREEN);
+		#if defined(PIN_LED_GREEN)
+		myDigitalWrite(PIN_LED_GREEN, LOW);
+		#endif
 
 		targetSysOn();
 
@@ -81,7 +85,10 @@ static swdStatus_t extractFlashData( uint32_t const address, uint32_t * const da
 		{
 			*data = extractedData;
 			++(extractionStatistics.numSuccess);
-			GPIO_LED_GREEN->ODR |= (0x01u << PIN_LED_GREEN);
+			//GPIO_LED_GREEN->ODR |= (0x01u << PIN_LED_GREEN);
+			#if defined(PIN_LED_GREEN)
+		        myDigitalWrite(PIN_LED_GREEN, HIGH);
+		        #endif
 		}
 		else
 		{
@@ -96,6 +103,8 @@ static swdStatus_t extractFlashData( uint32_t const address, uint32_t * const da
 		}
 
 		targetSysOff();
+		// uncomment the following (and adjust time), if system has a lot of capacitance and discharges slowly:
+		// waitms(30u);
 
 		waitms(1u);
 	}
@@ -126,20 +135,26 @@ void printExtractionStatistics( void )
 int main()
 {
 	/* Enable all GPIO clocks */
-	RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIODEN | RCC_AHBENR_GPIOEEN | RCC_AHBENR_GPIOFEN;
+	//RCC->AHBENR |= RCC_AHBENR_GPIOAEN | RCC_AHBENR_GPIOBEN | RCC_AHBENR_GPIOCEN | RCC_AHBENR_GPIODEN | RCC_AHBENR_GPIOEEN | RCC_AHBENR_GPIOFEN;
 	targetSysCtrlInit();
 	swdCtrlInit();
 	uartInit();
-
-	clkEnablePLLInt();
-	clkEnableSystick();
+	
+	myPinMode(PIN_BUTTON, INPUT_PULLUP);
+        #ifdef PIN_LED_BLUE
+            myPinMode(PIN_LED_BLUE, OUTPUT);
+            myDigitalWrite(PIN_LED_BLUE, HIGH);
+        #endif
+        #ifdef PIN_LED_GREEN
+            myPinMode(PIN_LED_GREEN, OUTPUT);
+        #endif
 
 	/* Board LEDs */
-	GPIO_LED_BLUE->MODER |= (0x01u << (PIN_LED_BLUE << 1u));
-	GPIO_LED_GREEN->MODER |= (0x01u << (PIN_LED_GREEN << 1u));
-	GPIO_LED_BLUE->OSPEEDR |= (0x03 << (PIN_LED_BLUE << 1u));
-	GPIO_LED_GREEN->OSPEEDR |= (0x03u << (PIN_LED_GREEN << 1u));
-	GPIO_LED_BLUE->ODR |= (0x01u << PIN_LED_BLUE);
+	//GPIO_LED_BLUE->MODER |= (0x01u << (PIN_LED_BLUE << 1u));
+	//GPIO_LED_GREEN->MODER |= (0x01u << (PIN_LED_GREEN << 1u));
+	//GPIO_LED_BLUE->OSPEEDR |= (0x03 << (PIN_LED_BLUE << 1u));
+	//GPIO_LED_GREEN->OSPEEDR |= (0x03u << (PIN_LED_GREEN << 1u));
+	//GPIO_LED_BLUE->ODR |= (0x01u << PIN_LED_BLUE);
 
 
 
@@ -161,7 +176,8 @@ int main()
 		uartReceiveCommands( &uartControl );
 
 		/* Start as soon as the button B1 has been pushed */
-		if (GPIO_BUTTON->IDR & (0x01u << (PIN_BUTTON)))
+		// if (GPIO_BUTTON->IDR & (0x01u << (PIN_BUTTON)))
+		if (digitalRead(PIN_BUTTON) == LOW)
 		{
 			btnActive = 1u;
 		}

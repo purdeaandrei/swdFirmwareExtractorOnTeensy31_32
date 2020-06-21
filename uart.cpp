@@ -9,8 +9,12 @@
 #include <string.h>
 #include "main.h"
 #include "uart.h"
+#include <core_pins.h>
+#include <usb_serial.h>
 
-#define UART_WAIT_TRANSMIT do { ; } while (!(USART2->ISR & USART_ISR_TXE));
+
+
+#define UART_WAIT_TRANSMIT do {} while (0);
 #define UART_BUFFER_LEN (12u)
 
 static const char chrTbl[] = "0123456789ABCDEF";
@@ -19,30 +23,9 @@ uint8_t uartStrInd = 0u;
 
 static void uartExecCmd( uint8_t const * const cmd, uartControl_t * const ctrl );
 
-/* UART: PA2 (TX), PA3 (RX) */
-
 void uartInit( void )
 {
-	uint8_t volatile uartData = 0u;
-	uartData = uartData; /* suppress GCC warning... */
-
-	RCC->AHBENR |= RCC_AHBENR_GPIOAEN;
-
-	/* USART2 configuration */
-	RCC->APB1ENR |= RCC_APB1ENR_USART2EN;
-	GPIOA->MODER |= GPIO_MODER_MODER2_1 | GPIO_MODER_MODER3_1;
-	GPIOA->OSPEEDR |= (GPIO_OSPEEDR_OSPEEDR2_0 | GPIO_OSPEEDR_OSPEEDR2_1) | (GPIO_OSPEEDR_OSPEEDR3_0 | GPIO_OSPEEDR_OSPEEDR3_1);
-	GPIOA->PUPDR |= GPIO_PUPDR_PUPDR2_1 | GPIO_PUPDR_PUPDR3_1;
-	GPIOA->AFR[0] = (0x01u << (2u * 4u)) | (0x01u << (3u * 4u));
-	USART2->CR2 = 0u;
-	USART2->BRR = 0x1A1u; /* 115200 Baud at 48 MHz clock */
-	USART2->CR1 = USART_CR1_UE | USART_CR1_RE | USART_CR1_TE;
-
-	/* Flush UART buffers */
-	uartData = USART2->RDR;
-	uartData = USART2->RDR;
-	uartData = USART2->RDR;
-
+        Serial.begin(9600);
 	return ;
 }
 
@@ -167,10 +150,9 @@ static void uartExecCmd( uint8_t const * const cmd, uartControl_t * const ctrl )
 void uartReceiveCommands( uartControl_t * const ctrl )
 {
 	uint8_t uartData = 0u;
-
-	if (USART2->ISR & USART_ISR_RXNE)
+  if (Serial.available() > 0)
 	{
-		uartData = USART2->RDR;
+		uartData = Serial.read();
 
 		switch (uartData)
 		{
@@ -234,7 +216,7 @@ void uartSendWordBinLE( uint32_t const val )
 
 	for (i = 0u; i < 4u; ++i)
 	{
-		USART2->TDR = tval & 0xFFu;
+		Serial.write((uint8_t)( tval & 0xFFu));
 		tval >>= 8u;
 		UART_WAIT_TRANSMIT;
 	}
@@ -250,7 +232,7 @@ void uartSendWordBinBE( uint32_t const val )
 
 	for (i = 0u; i < 4u; ++i)
 	{
-		USART2->TDR = ((tval >> ((3u - i) << 3u)) & 0xFFu);
+		Serial.write((uint8_t)( (tval >> ((3u - i) << 3u)) & 0xFFu ));
 		UART_WAIT_TRANSMIT;
 	}
 
@@ -301,17 +283,7 @@ void uartSendByteHex( uint8_t const val )
 	return ;
 }
 
-
 void uartSendStr( const char * const str )
 {
-	const char * strptr = str;
-
-	while (*strptr)
-	{
-		USART2->TDR = *strptr;
-		++strptr;
-		UART_WAIT_TRANSMIT;
-	}
-
-	return ;
+	Serial.print(str);
 }
