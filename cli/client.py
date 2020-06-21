@@ -31,7 +31,7 @@ def parse_args():
     )
     parser.add_argument(
         'SerialDeviceFILE',
-        help='Device File to read from (e.g., /dev/ttyUSB0)'
+        help='Device File to read from (e.g., /dev/ttyACM0, /dev/ttyUSB0)'
     )
     parser.add_argument(
         '-i',
