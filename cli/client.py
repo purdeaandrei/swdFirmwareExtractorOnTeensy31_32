@@ -19,6 +19,7 @@ from prompt_toolkit.contrib.completers import WordCompleter
 from prompt_toolkit.history import InMemoryHistory
 from prompt_toolkit.auto_suggest import AutoSuggestFromHistory
 
+SERIAL_PORT = "/dev/ttyUSB0"
 
 def auto_int(x):
     return int(x, 0)
@@ -87,7 +88,7 @@ def sigalarm_handler(signo, frame):
     print('End of data.')
     print()
     finish = True
-    UART('/dev/ttyUSB0').send_cmd('P', True)
+    UART(SERIAL_PORT).send_cmd('P', True)
 
 
 def decode_ascii(s, outfile):
@@ -238,7 +239,7 @@ class UART:
 class REPL:
 
     def __init__(self, start=0x00, length=0x10000, mode='bin',
-                 byteorder='little', devnode='/dev/ttyUSB0'):
+                 byteorder='little', devnode=SERIAL_PORT):
         self.history = InMemoryHistory()
         self.promt = '> '
         self.config = {
@@ -347,6 +348,8 @@ class REPL:
 
 def main():
     args = parse_args()
+    global SERIAL_PORT
+    SERIAL_PORT = args.SerialDeviceFILE
     signal.signal(signal.SIGALRM, sigalarm_handler)
 
     if not os.path.exists(args.SerialDeviceFILE):
